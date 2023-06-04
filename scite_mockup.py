@@ -216,6 +216,10 @@ class GUI:
             while True:
                 event2, values2 = second_window.read()
 
+                # THIS IS THE TERMINAL FEATURE
+
+                # IT IS NOW FUNCTIONAL
+
                 if event2 == 'Run':
                     print(values2['term-in'])
                     output = subprocess.check_output(values2['term-in'], shell=True).decode('utf-8')
