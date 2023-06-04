@@ -116,13 +116,30 @@ class Collaboration_worker:
         return data
     
 class Temp_file:
-    def __init__(self) -> None:
-        content = ''
-        users = []
+    def __init__(self, name="default", content="") -> None:
+        self.name = name
+        self.content = content
+        self.users = []
+
+    def add_user(self, user):
+        self.users.append(user)
 
 class Temp_server:
     def __init__(self) -> None:
-        file_list : list[Temp_file] = []
+        self.file_list : list[Temp_file] = []
+
+    def add_file(self, name, content="", user = None):
+        tfile = Temp_file(name, content)
+        if user != None:
+            tfile.add_user(user)
+        self.file_list.append(tfile)
+
+
+    def get_file(self, filename, username):
+        for file in self.file_list:
+            if file.name == filename:
+                if username in file.users:
+                    return file.content
 
 
 class GUI:
@@ -144,9 +161,12 @@ class GUI:
     window = sg.Window('SciTe mockup', layout, size=(1280, 720), resizable=True)
     # Event Loop to process "events"
     while True:             
+        tserver = Temp_server()
         event, values = window.read()
         collab_worker = Collaboration_worker()
         filepath = None
+
+        filename = "default"
 
         if event:
             print(event)
@@ -155,6 +175,8 @@ class GUI:
             username = sg.popup_get_text("Please enter your username:")
             password = sg.popup_get_text("Please enter your password:")
             current_user.update_details(username=username, password=password)
+
+            tserver.add_file('default', values['textarea'], username)
 
         if event == 'Open':
             try:
@@ -228,7 +250,10 @@ class GUI:
                     break
 
         if event == 'Sync':
-            window['textarea'].update(collab_worker.sync())
+            # window['textarea'].update(collab_worker.sync())
+            window['textarea'].update(
+                tserver.get_file(filename, current_user.username)
+            )
 
         if event == 'Compile Java':
             try:
