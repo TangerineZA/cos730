@@ -4,12 +4,13 @@ from tkinter import filedialog
 import os
 
 import requests
+import json
 
 from abc import abstractmethod
 import subprocess
 import language_tool_python
 
-SERVER_ADDRESS = "127.0.0.1"
+SERVER_ADDRESS = "127.0.0.1:5000"
 
 class User:
     def __init__(self, username : str = "", password : str = "") -> None:
@@ -72,13 +73,6 @@ class Grammar_checker(Doc_checker):
     def fix(self, text) -> str:
         return self.tool.correct(text)
 
-class Spell_checker(Doc_checker):
-    def check(self, text) -> list:
-        pass
-
-    def fix(self, text) -> str:
-        pass
-
 class Compiler:
     @abstractmethod
     def check(self, text):
@@ -122,13 +116,12 @@ def Java_compiler(Compiler):
 
 class Collaboration_worker:
     def __init__(self) -> None:
-        self.users : list = []
         self.user : User
 
-    def add_user(self, user : str):
-        # TODO this should send something to the server
-        if self.users.__contains__(user) == False:
-            self.users.append(user)
+    def add_user(self, username : str):
+        user_json = {'username': username}
+        address = SERVER_ADDRESS + "/collaborate/"
+        response = requests.post(url=address, json=user_json)
 
     def update_user(self, user):
         self.user = user
@@ -136,6 +129,10 @@ class Collaboration_worker:
     def sync(self):
         payload = {"user": self.user.username}
         response = requests.get(SERVER_ADDRESS + '/collaborate/')
+        data = response.json()
+        response_dict = json.loads(data)
+        text = response_dict['content']
+        return data
     
 
 class GUI:
@@ -145,7 +142,7 @@ class GUI:
         ['File', ['Open', 'Save', 'Save As']], 
         ['Compiler', ['Compile Java', 'Run Java']], 
         ['Terminal', ['Open in SciTE', 'Open in system shell']], 
-        ['Collaborate', ['Login', 'Invite user', 'End session']], 
+        ['Collaborate', ['Login', 'Invite user', 'Sync', 'End session']], 
         ['Checker', ['Language check', 'Fix language']]]
     # All the stuff inside your window. This is the sg magic code compactor...
     layout =    [[sg.Menu(menu_def)],
@@ -198,9 +195,6 @@ class GUI:
         if event == 'Invite user':
             username = sg.popup_get_text("Who do you want to invite?")
             collab_worker.add_user(username)
-            
-        if event == 'Language check':
-            pass
 
         if event == 'Open in SciTE':
             second_layout = [[sg.Multiline('', key='term-out', disabled=True)],
@@ -217,17 +211,18 @@ class GUI:
                 if event2 == "Exit" or event2 == sg.WIN_CLOSED:
                     break
 
+            exit()
+
         if event == 'Language check':
             gc = Grammar_checker()
-            mistakes = gc.check(window['textarea'])
-
+            mistakes = gc.check(values['textarea'])
             mistake_text = ''
 
             for mistake in mistakes:
                 print(mistake)
                 mistake_text = mistake_text + mistake.__str__()
 
-            second_layout = [[sg.Multiline(mistake_text, key='term-in')], 
+            second_layout = [[sg.Multiline(mistake_text, key='term-in', expand_x=True, expand_y=True)], 
                              [sg.Button('Fix'), sg.Button('Close')]]
             second_window = sg.Window("Mistakes", second_layout, size=(700, 700))
             print('Window spawned')
@@ -235,12 +230,15 @@ class GUI:
                 event2, values2 = second_window.read()
 
                 if event2 == 'Fix':
-                    fixed = gc.fix(window['textarea'])
+                    fixed = gc.fix(values['textarea'])
                     window['textarea'].update(fixed)
                     break
 
-                if event2 == "Exit" or event2 == sg.WIN_CLOSED:
+                if event2 == "Close" or event2 == sg.WIN_CLOSED:
                     break
+
+        if event == 'Sync':
+            window['textarea'].update(collab_worker.sync())
 
         if event in (sg.WIN_CLOSED, 'Cancel'):
             window.close()

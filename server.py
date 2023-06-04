@@ -3,6 +3,8 @@
 # - enable processing of collaboration service
 
 from flask import Flask, render_template, request, Response, jsonify, send_file
+import json
+import unittest
 
 class User:
     def __init__(self, username : str = "", password : str = "") -> None:
@@ -66,6 +68,7 @@ def post_latest():
 
 @app.route('/collaborate/', methods=['GET', 'POST'])
 def collab():
+    # GET collaborate sends latest version in JSON form
     if request.method == 'GET':
         try:
             if request.form['username'] in file.permitted_users:
@@ -73,9 +76,12 @@ def collab():
         except:
             print("Network error A")
         file = fl.get_file(request.form['filename'])
-
+    
+    # POST collaborate updates access
     elif request.method == 'POST':
-        file = fl.get_file(request.form['filename'])
+        json = request.get_json()
+        request_dict = json.loads(json)
+        file = fl.get_file(request_dict['filename'])
         if request.form['username'] in file.permitted_users:
             try:
                 file.overwrite(request.form['content'])
