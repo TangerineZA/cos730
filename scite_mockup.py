@@ -61,7 +61,7 @@ class Doc_checker:
 class Grammar_checker(Doc_checker):
     def __init__(self) -> None:
         super().__init__()
-        self.tool= language_tool_python('en-US')
+        self.tool= language_tool_python.LanguageTool('en-US')
 
     def check(self, text) -> list:
         mistakes = self.tool.check(text)
@@ -202,24 +202,48 @@ class GUI:
         if event == 'Language check':
             pass
 
-        if event == 'Open in SciTe':
-            second_layout = [[sg.Multiline('Term-Output')],
-                             [sg.Multiline('Term-Input'), sg.Button('Run')]]
+        if event == 'Open in SciTE':
+            second_layout = [[sg.Multiline('', key='term-out', disabled=True)],
+                             [sg.Multiline('Input', key='term-in'), sg.Button('Run')]]
             second_window = sg.Window("Terminal", second_layout)
+            print('Window spawned')
             while True:
                 event2, values2 = second_window.read()
 
                 if event2 == 'Run':
-                    output = subprocess.check_output(second_window['Term-Input']).decode('utf-8')
-                    second_window['Term-Input'].update(output)
+                    output = subprocess.check_output(second_window['term-in']).decode('utf-8')
+                    second_window['term-out'].update(output)
+
+                if event2 == "Exit" or event2 == sg.WIN_CLOSED:
+                    break
+
+        if event == 'Language check':
+            gc = Grammar_checker()
+            mistakes = gc.check(window['textarea'])
+
+            mistake_text = ''
+
+            for mistake in mistakes:
+                print(mistake)
+                mistake_text = mistake_text + mistake.__str__()
+
+            second_layout = [[sg.Multiline(mistake_text, key='term-in')], 
+                             [sg.Button('Fix'), sg.Button('Close')]]
+            second_window = sg.Window("Mistakes", second_layout, size=(700, 700))
+            print('Window spawned')
+            while True:
+                event2, values2 = second_window.read()
+
+                if event2 == 'Fix':
+                    fixed = gc.fix(window['textarea'])
+                    window['textarea'].update(fixed)
+                    break
 
                 if event2 == "Exit" or event2 == sg.WIN_CLOSED:
                     break
 
         if event in (sg.WIN_CLOSED, 'Cancel'):
-            break
-
-    window.close()
+            window.close()
 
 if __name__ == "__main__":
     GUI()
