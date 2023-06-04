@@ -79,40 +79,21 @@ class Compiler:
         pass
 
     @abstractmethod
-    def compile(self, text):
+    def compile(self):
         pass
 
     @abstractmethod
     def run(self, text):
         pass
 
-def CPP_compiler(Compiler):
-    def check(self, text):
+class Java_compiler(Compiler):
+    def compile(self):
+        java_compiler_output = subprocess.check_output("javac *.java", shell=True).decode('utf-8')
+        print('COMPILER OUTPUT -------------------------\n' + java_compiler_output + '-------------')
+        return java_compiler_output
+
+    def run(self, filename):
         pass
-
-    def compile(self, text):
-        pass
-
-    def run(self, text):
-        pass
-
-def Java_compiler(Compiler):
-
-    def compile(self, text) -> bool:
-        java_compiler_output = os.system("javac *.java")
-        if java_compiler_output == 0:
-            return True
-        else:
-            return False
-
-    def run(self, text, filename):
-        if compile(text=text):
-            run_string = "java " + filename
-            java_output = os.system(run_string)
-        if java_output == 0:
-            return True
-        else:
-            return False
 
 class Collaboration_worker:
     def __init__(self) -> None:
@@ -120,7 +101,7 @@ class Collaboration_worker:
 
     def add_user(self, username : str):
         user_json = {'username': username}
-        address = SERVER_ADDRESS + "/collaborate/"
+        address = SERVER_ADDRESS + "/register/"
         response = requests.post(url=address, json=user_json)
 
     def update_user(self, user):
@@ -134,8 +115,18 @@ class Collaboration_worker:
         text = response_dict['content']
         return data
     
+class Temp_file:
+    def __init__(self) -> None:
+        content = ''
+        users = []
+
+class Temp_server:
+    def __init__(self) -> None:
+        file_list : list[Temp_file] = []
+
 
 class GUI:
+    sg.theme('DefaultNoMoreNagging')
     current_user = User()
 
     menu_def = [
@@ -159,6 +150,7 @@ class GUI:
 
         if event:
             print(event)
+            
         if event == 'Login':
             username = sg.popup_get_text("Please enter your username:")
             password = sg.popup_get_text("Please enter your password:")
@@ -174,7 +166,6 @@ class GUI:
             except:
                 sg.popup_error("Whoops!")
             
-
         if event == 'Save':
             if filepath != None:
                 content = window['textarea']
@@ -197,21 +188,20 @@ class GUI:
             collab_worker.add_user(username)
 
         if event == 'Open in SciTE':
-            second_layout = [[sg.Multiline('', key='term-out', disabled=True)],
+            second_layout = [[sg.Multiline('', key='term-out', disabled=True, expand_x=True, expand_y=True)],
                              [sg.Multiline('Input', key='term-in'), sg.Button('Run')]]
-            second_window = sg.Window("Terminal", second_layout)
-            print('Window spawned')
+            second_window = sg.Window("Terminal", second_layout, size=(500,750))
             while True:
                 event2, values2 = second_window.read()
 
                 if event2 == 'Run':
-                    output = subprocess.check_output(second_window['term-in']).decode('utf-8')
+                    print(values2['term-in'])
+                    output = subprocess.check_output(values2['term-in'], shell=True).decode('utf-8')
+                    print(output)
                     second_window['term-out'].update(output)
 
                 if event2 == "Exit" or event2 == sg.WIN_CLOSED:
                     break
-
-            exit()
 
         if event == 'Language check':
             gc = Grammar_checker()
@@ -240,8 +230,31 @@ class GUI:
         if event == 'Sync':
             window['textarea'].update(collab_worker.sync())
 
+        if event == 'Compile Java':
+            try:
+
+                jc : Java_compiler = Java_compiler()
+
+                second_layout = [[sg.Multiline('', key='term-out', disabled=True, expand_x=True, expand_y=True)],
+                                 [sg.Button("Compile...")]]
+                second_window = sg.Window("Compiler Output", second_layout, size=(500,750))
+                while True:
+                    event2, values2 = second_window.read()
+
+                         
+                    if event2 == "Compile...":
+                        output = jc.compile()
+                        second_window['term-out'].update(output)  
+
+                    if event2 == "Exit" or event2 == sg.WIN_CLOSED:
+                        break
+            except:
+                print("An error occurred!")
+
+
         if event in (sg.WIN_CLOSED, 'Cancel'):
             window.close()
+            exit()
 
 if __name__ == "__main__":
     GUI()

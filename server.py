@@ -79,8 +79,8 @@ def collab():
     
     # POST collaborate updates access
     elif request.method == 'POST':
-        json = request.get_json()
-        request_dict = json.loads(json)
+        json_file = request.get_json()
+        request_dict = json.loads(json_file)
         file = fl.get_file(request_dict['filename'])
         if request.form['username'] in file.permitted_users:
             try:
@@ -91,8 +91,9 @@ def collab():
 @app.route('/register/', methods=['POST'])
 def add_user():
     try:
-        new_user = User(request.form['username'], request.form['password'])
-        ul.append(new_user)
+        json_file = request.get_json()
+        request_dict = json.loads(json_file)
+        ul.append(request_dict['username'])
     except:
         print("error!")
         return Response(
